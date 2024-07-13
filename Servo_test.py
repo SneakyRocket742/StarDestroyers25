@@ -44,6 +44,16 @@ def sweep(): 			# Defining statement for the "sweep" function
 			servo.value = ang 			# Sets servo angle to that of ang
 			sleep(0.1) 			# Delays for half a second
 
-
-if __name__ == "__main__": 			# Only runs following code if the program being ran is "Servo_Test.py"
-	main() 			# Runs the function "main()"
+try: 			#Attempts to run the following code, and if said code fails runs the proper except or else code
+	if __name__ == "__main__": 			# Only runs following code if the program being ran is "Servo_Test.py"
+		main() 			# Runs the function "main()"
+except KeyboardInterrupt: 			# Runs if the user pressed ctrl-c or another keyboard interrupt
+	print("Test stopped via user input") 				# Prints the text within the parenthesis.
+except NameError: 			# Runs if a name error occurs, such as when a variable is not properly defined.
+	print("Error! There appears to be a name error, verify that every variable is defined properly") 				# Prints the text within the parenthesis.
+except ArithmeticError: 				# Runs if an Arithmetic Error occurs, such as if the program attempts to divide by zero.
+	print("Error! There appears to have been an error in your math, check to verify that the value of Correcc is a valid float greater than zero.") 				# Prints the text within the parenthesis.
+except ImportError: 			#Runs if an Import Error occurs, such as if a module is not installed on the hardware atempting to run the program.
+	print("Error! It seems like the modules failed to import, verify that the import statements are valid and that you have the proper modules installed.") 				# Prints the text within the parenthesis.
+else: 			#Runs if an error occurs not covered by any of the except statements.
+	print("Error! An unknown error occurred.") 				# Prints the text within the parenthesis.
