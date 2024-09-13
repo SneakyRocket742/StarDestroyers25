@@ -1,6 +1,7 @@
 from gpiozero import Servo 			# type: ignore
 from DFRobot_BMX160 import BMX160 			# type: ignore
 from time import sleep
+from statistics import mean
 import sys
 import busio 			# type: ignore
 import adafruit_bmp3xx 			# type: ignore
@@ -12,8 +13,10 @@ SDA = 3 			# Defines the SDA variable to 3, for where the SDA pin is located on 
 MtrsToFt = 3.281 			# The value one must multiply meters by convert to feet.
 Correcc: float = 0.50 			#Ammount that I am correcting the defined pulse width of the servo by
 maxPW: float = (2.0 + Correcc) / 1000 			#Setting the new max pulse width of the servo
-minPW: float = (1.0 - Correcc) / 1000 			#Settng the new minimum pulse width of the servo
+minPW: float = (1.0 - Correcc) / 1000 			#Setting the new minimum pulse width of the servo
+ArmDly = 10
 
+##Setup##
 def setup():
 	sys.path.append('../../')
 	servo = Servo(12,min_pulse_width=minPW,max_pulse_width=maxPW) 			#Making a servo object name "servo", on pin 12 with the minimum pulse width of minPW and maximum pulse width of maxPW
@@ -22,5 +25,58 @@ def setup():
 	bmp = adafruit_bmp3xx.BMP3XX_I2C(i2c, address = 0x76) 			# Making a sensor object name "BMP" at I2C address of 0x76
 	bmp.altitude_oversampling = 4			# Defines oversampling value for altitude
 
+##Ground Testing##
 def grndTest():
-	pass
+    print("Testing and calibrating altitude")
+    GrndAlt = round(mean(AltGet(3)))
+    CalAlt = AltGet(1) - GrndAlt
+    print(f"The relative altitude is {CalAlt}, while the actual altitude is {AltGet(1)}")
+    sleep(0.5)
+    print("Starting Accel Checks.")
+    for i in range(AccelChcks):
+        Accel = AccelGet(1)
+        print(f"The acceleration is as follows. x: {alt[6]} m/s^2, y: {alt[7]} m/s^2, z:{alt[8]} m/s^2")
+        sleep(0.5)
+    print("Starting Airbreak Sweep in t-5. Stand Clear!")
+    sleep(5)
+    AirBrkSwp(3)
+    print("Airbreak Sweep complete! Moving to standby")
+
+##Standby##
+def standby():
+    print(f"Warning! Arming in t-{ArmDly} seconds!")
+    delay(ArmDly)
+    print("In standby! Avoid sudden movements")
+    Launch = False
+    while not Launch:
+        Accel = AccelGet(1)
+        if Accel[7] >= -18:
+            print("Launch detected!")
+            Launch = True
+
+
+#Altitude Acquisition#
+def AltGet(Repetitions):
+    alt = 0
+    for i in range(Repetitions):
+        alt = bmp.altitude
+        alt = round(alt * MtrsToFT, 3)
+    alt = mean(alt)
+    return(alt)
+#Acceleration Acquisition#
+def AccelGet():
+    accel = round(alf.get_accel(), 3)
+
+#Airbreak Sweep#
+def AirBrkSwp(Repetitions):
+    for i in range(Repeititions):
+        for n in range(0,21):
+            ang = (float(i) - 10) / 10
+            servo.value = ang
+            sleep(0.1)
+        for n in range(20, -1, -1):
+            ang = (float(i) - 10) / 10
+            servo.value = ang
+            sleep(0.1)
+        print(f"Sweep iteration {i + 1} complete!")
+            delay(1.5)
