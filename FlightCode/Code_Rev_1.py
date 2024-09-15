@@ -11,6 +11,7 @@ AccelCtrl = 1
 SCL = 2 			# Defines the SCL variable to 2, for where the SCL pin located on the pi.
 SDA = 3 			# Defines the SDA variable to 3, for where the SDA pin is located on the pi.
 MtrsToFt = 3.281 			# The value one must multiply meters by convert to feet.
+TargetAlt = 750
 Correcc: float = 0.50 			#Ammount that I am correcting the defined pulse width of the servo by
 maxPW: float = (2.0 + Correcc) / 1000 			#Setting the new max pulse width of the servo
 minPW: float = (1.0 - Correcc) / 1000 			#Setting the new minimum pulse width of the servo
@@ -53,6 +54,40 @@ def standby():
         if Accel[7] >= -18:
             print("Launch detected!")
             Launch = True
+##Flight##
+def flight():
+    print("liftoff!")
+    triggered = False
+    while not triggered:
+        FlightAlt = AltGet(1) - CalAlt
+        AccelGet(1)
+        print(f"The altitude is {FlightAlt}, and the acceleration data is as follows. X:{alt[6]} m/s^2, Y:{alt[7]} m/s^2, Z:{alt[8]} m/s^2")
+        if AltGet(1) >= TargetAlt:
+            strikes = strikes + 1
+            if strikes >= 3:
+                triggered = True
+        else:
+            strikes = 0
+
+##Deployment##
+def deploy():
+    print("Deploying Airbrakes!")
+    servo.max()
+    print("Deployed")
+    flying = True
+    strikes = 0
+    while flying:
+        FlightAlt = AltGet(1) - CalAlt
+        AccelGet(1)
+        print(f"The altitude is {FlightAlt}, and the acceleration data is as follows. X:{alt[6]} m/s^2, Y:{alt[7]} m/s^2, Z:{alt[8]} m/s^2")
+        if AltGet(1) >= 0:
+            strikes = strikes + 1
+            if strikes >= 3:
+                print("Warning! Shutdown in t-30 secconds")
+                sleep(30)
+                flying = False
+    else:
+        strikes = 0
 
 
 #Altitude Acquisition#
@@ -80,3 +115,14 @@ def AirBrkSwp(Repetitions):
             sleep(0.1)
         print(f"Sweep iteration {i + 1} complete!")
             delay(1.5)
+
+
+def main():
+    setup()
+    grndtest()
+    standby()
+    flight()
+    deploy()
+
+if __name__ == '__main__':
+    main()
