@@ -80,7 +80,7 @@ def deploy():
         FlightAlt = AltGet(1) - CalAlt
         AccelGet(1)
         print(f"The altitude is {FlightAlt}, and the acceleration data is as follows. X:{alt[6]} m/s^2, Y:{alt[7]} m/s^2, Z:{alt[8]} m/s^2")
-        if AltGet(1) >= 0:
+        if AltGet(1) <= 0:
             strikes = strikes + 1
             if strikes >= 3:
                 print("Warning! Shutdown in t-30 secconds")
