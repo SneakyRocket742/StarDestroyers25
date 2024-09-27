@@ -1,26 +1,26 @@
-from gpiozero import Servo 			# type: ignore
-from DFRobot_BMX160 import BMX160 			# type: ignore
-from time import sleep
-from statistics import mean
-import sys
-import busio 			# type: ignore
-import adafruit_bmp3xx 			# type: ignore
+from gpiozero import Servo          # This module is used to control the servo 
+from DFRobot_BMX160 import BMX160 			# This module is used to control the Accelerometer
+from time import sleep              # This module is used to implement delays in the code.
+from statistics import mean             # This module is used to help average out and smooth out the data, smoothing out floating point errors.
+import sys          # This module is used to help manipulate the interpretor
+import busio 			# This module is used to implement I2C capabilities for communicating with the sensors.
+import adafruit_bmp3xx 			# This module is used to control the altimeter.
 
 ##variables##
-AccelCtrl = 1
+AccelCtrl = 1           # Defines the location of the control pin for the Accelerometer.
 SCL = 2 			# Defines the SCL variable to 2, for where the SCL pin located on the pi.
 SDA = 3 			# Defines the SDA variable to 3, for where the SDA pin is located on the pi.
 MtrsToFt = 3.281 			# The value one must multiply meters by convert to feet.
 TargetAlt = 750
-Correcc: float = 0.50 			#Ammount that I am correcting the defined pulse width of the servo by
-maxPW: float = (2.0 + Correcc) / 1000 			#Setting the new max pulse width of the servo
-minPW: float = (1.0 - Correcc) / 1000 			#Setting the new minimum pulse width of the servo
+Correcc: float = 0.50 			# Amount that I am correcting the defined pulse width of the servo by
+maxPW: float = (2.0 + Correcc) / 1000 			# Setting the new max pulse width of the servo
+minPW: float = (1.0 - Correcc) / 1000 			# Setting the new minimum pulse width of the servo
 ArmDly = 10
 
 ##Setup##
 def setup():
 	sys.path.append('../../')
-	servo = Servo(12,min_pulse_width=minPW,max_pulse_width=maxPW) 			#Making a servo object name "servo", on pin 12 with the minimum pulse width of minPW and maximum pulse width of maxPW
+	servo = Servo(12, min_pulse_width=minPW, max_pulse_width=maxPW) 			# Making a servo object name "servo", on pin 12 with the minimum pulse width of minPW and maximum pulse width of maxPW
 	alf = BMX160(AccelCtrl) 			# Creating and defining the sensor object as 'alf'
 	i2c = busio.I2C(SDA, SCL) 			# Defining where SDA and SCL pins are.
 	bmp = adafruit_bmp3xx.BMP3XX_I2C(i2c, address = 0x76) 			# Making a sensor object name "BMP" at I2C address of 0x76
