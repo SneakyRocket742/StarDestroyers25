@@ -6,7 +6,7 @@ import sys          # This module is used to help manipulate the interpretor
 import busio 			# This module is used to implement I2C capabilities for communicating with the sensors.
 import adafruit_bmp3xx 			# This module is used to control the altimeter.
 
-##variables##
+##Variables##
 AccelCtrl = 1           # Defines the location of the control pin for the Accelerometer.
 SCL = 2 			# Defines the SCL variable to 2, for where the SCL pin located on the pi.
 SDA = 3 			# Defines the SDA variable to 3, for where the SDA pin is located on the pi.
@@ -16,6 +16,7 @@ Correcc: float = 0.50 			# Amount that I am correcting the defined pulse width o
 maxPW: float = (2.0 + Correcc) / 1000 			# Setting the new max pulse width of the servo
 minPW: float = (1.0 - Correcc) / 1000 			# Setting the new minimum pulse width of the servo
 ArmDly = 10
+AccelChcks = 3
 
 ##Setup##
 def setup():
@@ -30,7 +31,7 @@ def setup():
 def grndTest():
     print("Testing and calibrating altitude")
     GrndAlt = round(mean(AltGet(3)))
-    CalAlt = AltGet(1) - GrndAlt
+    global CalAlt = AltGet(1) - GrndAlt
     print(f"The relative altitude is {CalAlt}, while the actual altitude is {AltGet(1)}")
     sleep(0.5)
     print("Starting Accel Checks.")
@@ -46,7 +47,7 @@ def grndTest():
 ##Standby##
 def standby():
     print(f"Warning! Arming in t-{ArmDly} seconds!")
-    delay(ArmDly)
+    sleep(ArmDly)
     print("In standby! Avoid sudden movements")
     Launch = False
     while not Launch:
@@ -58,6 +59,7 @@ def standby():
 def flight():
     print("liftoff!")
     triggered = False
+    strikes = 0
     while not triggered:
         FlightAlt = AltGet(1) - CalAlt
         AccelGet(1)
@@ -98,9 +100,11 @@ def AltGet(Repetitions):
         alt = round(alt * MtrsToFT, 3)
     alt = mean(alt)
     return(alt)
+
 #Acceleration Acquisition#
 def AccelGet():
     accel = round(alf.get_accel(), 3)
+    return accel
 
 #Airbreak Sweep#
 def AirBrkSwp(Repetitions):
@@ -114,12 +118,12 @@ def AirBrkSwp(Repetitions):
             servo.value = ang
             sleep(0.1)
         print(f"Sweep iteration {i + 1} complete!")
-            delay(1.5)
+            sleep(1.5)
 
 
 def main():
     setup()
-    grndtest()
+    grndTest()
     standby()
     flight()
     deploy()
