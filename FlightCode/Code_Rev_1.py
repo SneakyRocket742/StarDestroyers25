@@ -1,10 +1,13 @@
-from gpiozero import Servo          # This module is used to control the servo 
+from gpiozero import Servo          # This module is used to control the servo
 from DFRobot_BMX160 import BMX160 			# This module is used to control the Accelerometer
 from time import sleep              # This module is used to implement delays in the code.
 from statistics import mean             # This module is used to help average out and smooth out the data, smoothing out floating point errors.
+from math import sqrt
 import sys          # This module is used to help manipulate the interpretor
 import busio 			# This module is used to implement I2C capabilities for communicating with the sensors.
 import adafruit_bmp3xx 			# This module is used to control the altimeter.
+import array
+import os
 
 ##Variables##
 AccelCtrl = 1           # Defines the location of the control pin for the Accelerometer.
@@ -17,9 +20,17 @@ maxPW: float = (2.0 + Correcc) / 1000 			# Setting the new max pulse width of th
 minPW: float = (1.0 - Correcc) / 1000 			# Setting the new minimum pulse width of the servo
 ArmDly = 10
 AccelChcks = 3
+accelTrgr = 18
+dumpSize = 10
+sleep_delay = 0.005
+shutdownTime = 10
+GrndAlt = 0
 
 ##Setup##
 def setup():
+	global servo
+	global alf
+	global bmp
 	sys.path.append('../../')
 	servo = Servo(12, min_pulse_width=minPW, max_pulse_width=maxPW) 			# Making a servo object name "servo", on pin 12 with the minimum pulse width of minPW and maximum pulse width of maxPW
 	alf = BMX160(AccelCtrl) 			# Creating and defining the sensor object as 'alf'
@@ -30,103 +41,82 @@ def setup():
 ##Ground Testing##
 def grndTest():
     print("Testing and calibrating altitude")
-    GrndAlt = round(mean(AltGet(3)))
-    global CalAlt = AltGet(1) - GrndAlt
-    print(f"The relative altitude is {CalAlt}, while the actual altitude is {AltGet(1)}")
+    global GrndAlt
+    GrndAlt = AltGet(3)
+    print(f"The relative altitude is {GrndAlt - AltGet(1)}, while the actual altitude is {AltGet(1)}")
     sleep(0.5)
     print("Starting Accel Checks.")
     for i in range(AccelChcks):
-        Accel = AccelGet(1)
-        print(f"The acceleration is as follows. x: {alt[6]} m/s^2, y: {alt[7]} m/s^2, z:{alt[8]} m/s^2")
+        Accel = AccelGet()
+        print(f"The relative acceleration is {Accel}")
         sleep(0.5)
     print("Starting Airbreak Sweep in t-5. Stand Clear!")
     sleep(5)
     AirBrkSwp(3)
     print("Airbreak Sweep complete! Moving to standby")
 
-##Standby##
-def standby():
-    print(f"Warning! Arming in t-{ArmDly} seconds!")
-    sleep(ArmDly)
-    print("In standby! Avoid sudden movements")
-    Launch = False
-    while not Launch:
-        Accel = AccelGet(1)
-        if Accel[7] >= -18:
+##Launch Loop##
+def launch():
+    print("Standby for launch")
+    maxAccel = 0
+    while True:
+        accel = AccelGet()
+        if accel > maxAccel:
+            maxAccel = accel
+        if accel >= accelTrgr:
             print("Launch detected!")
-            Launch = True
-##Flight##
-def flight():
-    print("liftoff!")
-    triggered = False
-    strikes = 0
-    while not triggered:
-        FlightAlt = AltGet(1) - CalAlt
-        AccelGet(1)
-        print(f"The altitude is {FlightAlt}, and the acceleration data is as follows. X:{alt[6]} m/s^2, Y:{alt[7]} m/s^2, Z:{alt[8]} m/s^2")
-        if AltGet(1) >= TargetAlt:
-            strikes = strikes + 1
-            if strikes >= 3:
-                triggered = True
-        else:
-            strikes = 0
-
-##Deployment##
-def deploy():
-    print("Deploying Airbrakes!")
-    servo.max()
-    print("Deployed")
-    flying = True
-    strikes = 0
-    while flying:
-        FlightAlt = AltGet(1) - CalAlt
-        AccelGet(1)
-        print(f"The altitude is {FlightAlt}, and the acceleration data is as follows. X:{alt[6]} m/s^2, Y:{alt[7]} m/s^2, Z:{alt[8]} m/s^2")
-        if AltGet(1) <= 0:
-            strikes = strikes + 1
-            if strikes >= 3:
-                print("Warning! Shutdown in t-30 secconds")
-                sleep(30)
-                flying = False
-    else:
-        strikes = 0
-
+            break
+    runtime = 0
+    alts = array.array('d')             # d is floating point data
+    file = open('/home/tarc/2025-Code/FlightData/Test0', 'w') 
+    while True:
+        CurAlt = GrndAlt - AltGet(1)
+        print(f"{CurAlt},{GrndAlt}")
+        if CurAlt >= TargetAlt:
+            print("Deploying Airbrakes!")
+            servo.max()
+        alts.append(CurAlt)
+        dataLength = alts.buffer_info()[1]
+        if dataLength >= dumpSize:
+            for alt in alts:
+                file.write(f"{alt}")
+            alts = array.array('d')
+        sleep(sleep_delay)
+        runtime += sleep_delay
+        if runtime >= shutdownTime:
+            os.close(file)
+            return
 
 #Altitude Acquisition#
 def AltGet(Repetitions):
     alt = 0
     for i in range(Repetitions):
-        alt = bmp.altitude
-        alt = round(alt * MtrsToFT, 3)
-    alt = mean(alt)
+        alt += bmp.altitude
+    alt /= Repetitions    
+    alt = round(alt * MtrsToFt, 3)
     return(alt)
 
 #Acceleration Acquisition#
-def AccelGet():
-    accel = round(alf.get_accel(), 3)
+def AccelGet(): 
+    data = alf.get_all_data()
+    accel = sqrt((data[6] * data[6]) + (data[7] * data[7]) + (data[8] * data[8]))
     return accel
 
 #Airbreak Sweep#
 def AirBrkSwp(Repetitions):
-    for i in range(Repeititions):
-        for n in range(0,21):
-            ang = (float(i) - 10) / 10
-            servo.value = ang
-            sleep(0.1)
-        for n in range(20, -1, -1):
-            ang = (float(i) - 10) / 10
-            servo.value = ang
-            sleep(0.1)
-        print(f"Sweep iteration {i + 1} complete!")
-            sleep(1.5)
+    servo.min()
+    for i in range(Repetitions):
+        servo.max()
+        sleep(1)
+        servo.min()
+        print(f"Airbrake iteration {i + 1} complete!")
+        sleep(1.5)
 
 
 def main():
     setup()
     grndTest()
-    standby()
-    flight()
-    deploy()
+    launch()
 
 if __name__ == '__main__':
     main()
