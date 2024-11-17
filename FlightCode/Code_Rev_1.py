@@ -20,7 +20,7 @@ maxPW: float = (2.0 + Correcc) / 1000 			# Setting the new max pulse width of th
 minPW: float = (1.0 - Correcc) / 1000 			# Setting the new minimum pulse width of the servo
 ArmDly = 10
 AccelChcks = 3
-accelTrgr = 18
+accelTrgr = 11  # CHANGE BACK TO 18 BEFORE LAUNCH!!!!!!
 dumpSize = 10
 sleep_delay = 0.005
 shutdownTime = 10
@@ -46,6 +46,7 @@ def grndTest():
     print(f"The relative altitude is {GrndAlt - AltGet(1)}, while the actual altitude is {AltGet(1)}")
     sleep(0.5)
     print("Starting Accel Checks.")
+    print(f"If {accelTrgr} is not equal to 18, NO GO! Change the value in the code.")
     for i in range(AccelChcks):
         Accel = AccelGet()
         print(f"The relative acceleration is {Accel}")
@@ -68,26 +69,61 @@ def launch():
             break
     runtime = 0
     alts = array.array('d')             # d is floating point data
-    file = open('/home/tarc/2025-Code/FlightData/Test0', 'w') 
+    file = open('/home/tarc/2025-Code/FlightData/Test0', 'w')
+    Triggered = False
     while True:
-        CurAlt = GrndAlt - AltGet(1)
-        print(f"{CurAlt},{GrndAlt}")
-        if CurAlt >= TargetAlt:
-            print("Deploying Airbrakes!")
-            servo.max()
+        CurAlt = AltGet(1) - GrndAlt
+        alts.append(CurAlt)
+        dataLength = alts.buffer_info()[1]
+        if dataLength >= dumpSize:
+            break
         alts.append(CurAlt)
         dataLength = alts.buffer_info()[1]
         if dataLength >= dumpSize:
             for alt in alts:
-                file.write(f"{alt}")
+                file.write(f"{alt}\n")
             alts = array.array('d')
         sleep(sleep_delay)
         runtime += sleep_delay
+
+        for alt in alts:
+            file.write(f"{alt}\n")
+        alts = array.array('d')
+        sleep(sleep_delay)
+        runtime += sleep_delay
+
+        if CurAlt >= TargetAlt:
+            print("Deploying Airbrakes!")
+            for alt in alts:
+                file.write(f"{alt}\n")
+            servo.max()
+            alts = array.array('d')
+            break
+    while True:
+        CurAlt = AltGet(1) - GrndAlt
+        alts.append(CurAlt)
+        dataLength = alts.buffer_info()[1]
+        if dataLength >= dumpSize:
+            break
+        alts.append(CurAlt)
+        dataLength = alts.buffer_info()[1]
+        if dataLength >= dumpSize:
+            for alt in alts:
+                file.write(f"{alt}\n")
+            alts = array.array('d')
+        sleep(sleep_delay)
+        runtime += sleep_delay
+
+        for alt in alts:
+            file.write(f"{alt}\n")
+        alts = array.array('d')
+        sleep(sleep_delay)
+        runtime += sleep_delay
         if runtime >= shutdownTime:
-            os.close(file)
+            file.close()
             return
 
-#Altitude Acquisition#
+ #Altitude Acquisition#
 def AltGet(Repetitions):
     alt = 0
     for i in range(Repetitions):
