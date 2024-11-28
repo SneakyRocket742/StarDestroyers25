@@ -20,7 +20,7 @@ maxPW: float = (2.0 + Correcc) / 1000 			# Setting the new max pulse width of th
 minPW: float = (1.0 - Correcc) / 1000 			# Setting the new minimum pulse width of the servo
 ArmDly = 10
 AccelChcks = 3
-accelTrgr = 11  # CHANGE BACK TO 18 BEFORE LAUNCH!!!!!!
+accelTrgr = 18  # CHANGE BACK TO 18 BEFORE LAUNCH!!!!!!
 dumpSize = 10
 sleep_delay = 0.005
 shutdownTime = 10
@@ -69,6 +69,7 @@ def launch():
             break
     runtime = 0
     alts = array.array('d')             # d is floating point data
+    global file
     file = open('/home/tarc/2025-Code/FlightData/Test0', 'w')
     Triggered = False
     while True:
@@ -120,6 +121,7 @@ def launch():
         sleep(sleep_delay)
         runtime += sleep_delay
         if runtime >= shutdownTime:
+            print("Ending Program!")
             file.close()
             return
 
@@ -153,6 +155,9 @@ def main():
     setup()
     grndTest()
     launch()
-
-if __name__ == '__main__':
-    main()
+try:
+    if __name__ == '__main__':
+        main()
+except KeyboardInterrupt:
+    print("Program manually stopped!")
+   # file.close()
