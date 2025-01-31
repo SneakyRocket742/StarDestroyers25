@@ -14,7 +14,7 @@ AccelCtrl = 1           # Defines the location of the control pin for the Accele
 SCL = 2 			# Defines the SCL variable to 2, for where the SCL pin located on the pi.
 SDA = 3 			# Defines the SDA variable to 3, for where the SDA pin is located on the pi.
 MtrsToFt = 3.281 			# The value one must multiply meters by convert to feet.
-TargetAlt = 750
+TargetAlt = 700
 Correcc: float = 0.50 			# Amount that I am correcting the defined pulse width of the servo by
 maxPW: float = (2.0 + Correcc) / 1000 			# Setting the new max pulse width of the servo
 minPW: float = (1.0 - Correcc) / 1000 			# Setting the new minimum pulse width of the servo
@@ -70,7 +70,7 @@ def launch():
     runtime = 0
     alts = array.array('d')             # d is floating point data
     global file
-    file = open('/home/tarc/2025-Code/FlightData/Test0', 'w')
+    file = open('/home/tarc/2025-Code/FlightData/Flight1', 'w')
     Triggered = False
     while True:
         CurAlt = AltGet(1) - GrndAlt
